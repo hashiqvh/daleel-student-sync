@@ -138,6 +138,7 @@ export async function GET(request: NextRequest) {
 
     const apiBaseUrl = process.env.DALEEL_API_BASE_URL || 'https://api-daleel.spea.shj.ae';
     const yearId = process.env.DALEEL_YEAR_ID || '1052';
+    const ownerId = authData.user.ownerId;
 
     const response = await fetch(`${apiBaseUrl}/api/Student/${studentGuid}?schoolYearId=`, {
       method: 'GET',

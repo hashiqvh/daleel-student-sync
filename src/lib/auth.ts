@@ -16,6 +16,7 @@ export interface User {
     scope: string;
   }>;
   isActive: boolean;
+  ownerId: number;
 }
 
 export interface AuthData {

@@ -22,6 +22,7 @@ export async function PUT(request: NextRequest) {
 
     const apiBaseUrl = process.env.DALEEL_API_BASE_URL || 'https://api-daleel.spea.shj.ae';
     const yearId = process.env.DALEEL_YEAR_ID || '1052';
+    const ownerId = authData.user.ownerId;
 
     // Ensure studentTalent array contains only talentId values
     if (studentData.studentTalent) {
@@ -50,6 +51,8 @@ export async function PUT(request: NextRequest) {
     // Log the data being sent for debugging
     console.log('=== STUDENT UPDATE DATA ===');
     console.log('Student GUID:', studentGuid);
+    console.log('Owner ID:', ownerId);
+    console.log('Year ID:', yearId);
     console.log('Full Student Data:', JSON.stringify(studentData, null, 2));
     console.log('StudentTalent Array:', studentData.studentTalent);
     console.log('StudentPayments:', studentData.studentPayments);

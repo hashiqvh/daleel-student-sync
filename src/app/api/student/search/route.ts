@@ -17,8 +17,9 @@ export async function POST(request: NextRequest) {
 
     const apiBaseUrl = process.env.DALEEL_API_BASE_URL || 'https://api-daleel.spea.shj.ae';
     const yearId = process.env.DALEEL_YEAR_ID || '1052';
+    const ownerId = authData.user.ownerId;
 
-    const response = await fetch(`${apiBaseUrl}/api/Student/students/1413`, {
+    const response = await fetch(`${apiBaseUrl}/api/Student/students/${ownerId}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authData.token}`,
