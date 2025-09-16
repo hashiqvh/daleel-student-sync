@@ -5,13 +5,32 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Skip middleware for login page and API routes
-  if (pathname === '/login' || pathname.startsWith('/api/')) {
+  if (pathname === '/login' || pathname.startsWith('/api/auth/')) {
     return NextResponse.next();
   }
 
-  // Since we're using localStorage for authentication,
-  // the client-side will handle redirects based on token presence
-  // This middleware now only protects API routes (which check Authorization header)
+  // Check for authentication cookies
+  const token = request.cookies.get('daleel_token')?.value;
+  const expires = request.cookies.get('daleel_expires')?.value;
+
+  // If no token or expires, redirect to login
+  if (!token || !expires) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+
+  // Check if token is expired
+  const expiryTime = new Date(expires).getTime();
+  const currentTime = new Date().getTime();
+  
+  if (expiryTime <= currentTime) {
+    // Token expired, clear cookies and redirect to login
+    const response = NextResponse.redirect(new URL('/login', request.url));
+    response.cookies.set('daleel_token', '', { expires: new Date(0) });
+    response.cookies.set('daleel_user', '', { expires: new Date(0) });
+    response.cookies.set('daleel_expires', '', { expires: new Date(0) });
+    return response;
+  }
+
   return NextResponse.next();
 }
 

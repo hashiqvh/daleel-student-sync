@@ -1,7 +1,6 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
-import Image from 'next/image';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
@@ -36,16 +35,6 @@ interface StudentAPIResponse {
 
 export default function ExcelUploadPage() {
   const { user, logout, getTimeUntilExpiry, isTokenExpired } = useAuth();
-  
-  // Helper function to get auth headers
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('daleel_token');
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    };
-  };
-  
   const [excelData, setExcelData] = useState<ExcelRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingAPI, setIsProcessingAPI] = useState(false);
@@ -68,9 +57,7 @@ export default function ExcelUploadPage() {
         studentNumber: studentNumber.toString()
       });
       
-      const response = await fetch(`/api/student/details?${params}`, {
-        headers: getAuthHeaders()
-      });
+      const response = await fetch(`/api/student/details?${params}`);
 
       if (!response.ok) {
         return null;
@@ -88,7 +75,9 @@ export default function ExcelUploadPage() {
     try {
       const response = await fetch('/api/student/update', {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           studentGuid: studentGuid,
           studentData: studentData
@@ -112,29 +101,22 @@ export default function ExcelUploadPage() {
     try {
       const response = await fetch('/api/student/search', {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ ministryNumber })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Student Search API Error:', errorData);
         if (response.status === 401) {
           setError('Authentication failed: JWT token may be expired. Please contact support to refresh the API token.');
         }
         return { status: 'error' };
       }
 
-      const data: StudentAPIResponse = await response.json();
-      console.log('Search response data:', data);
-      
-      if (data.result && data.result.data && data.result.data.length > 0) {
-        console.log('Found student:', data.result.data[0]);
-        return { studentGuid: data.result.data[0].studentGuid, status: 'success' };
-      } else {
-        console.log('No student found for ministry number:', ministryNumber);
-        return { status: 'not_found' };
-      }
+      const data = await response.json();
+      return data;
     } catch (error) {
       console.error('API Error:', error);
       return { status: 'error' };
@@ -142,7 +124,6 @@ export default function ExcelUploadPage() {
   };
 
   const processStudentData = async (data: ExcelRow[]) => {
-    console.log('Starting to process student data:', data.length, 'rows');
     setIsProcessingAPI(true);
     setApiProgress({ current: 0, total: data.length });
     
@@ -150,7 +131,6 @@ export default function ExcelUploadPage() {
     
     for (let i = 0; i < data.length; i++) {
       const ministryNumber = String(data[i]['Min. No.']).trim();
-      console.log(`Processing row ${i + 1}/${data.length}: Ministry Number ${ministryNumber}`);
       
       // Update progress
       setApiProgress({ current: i + 1, total: data.length });
@@ -161,11 +141,9 @@ export default function ExcelUploadPage() {
       
       // Make API call
       const result = await fetchStudentData(ministryNumber);
-      console.log(`API result for ${ministryNumber}:`, result);
       
       let studentDetails = null;
       if (result.status === 'success' && result.studentGuid) {
-        console.log(`Fetching details for student ${result.studentGuid}`);
         // Fetch detailed student information with payment data from Excel
         studentDetails = await fetchStudentDetails(
           result.studentGuid,
@@ -174,7 +152,6 @@ export default function ExcelUploadPage() {
           Number(data[i]['Balance']) || 0,
           Number(data[i]['Admn No.']) || 0
         );
-        console.log(`Student details for ${result.studentGuid}:`, studentDetails);
       }
       
       // Update the row with result
@@ -192,7 +169,6 @@ export default function ExcelUploadPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    console.log('Finished processing student data');
     setIsProcessingAPI(false);
   };
 
@@ -390,20 +366,12 @@ export default function ExcelUploadPage() {
   };
 
   const updateAllStudents = async () => {
-    console.log('Checking students for update. Total excelData:', excelData.length);
-    console.log('Excel data:', excelData);
-    
     const studentsToUpdate = excelData.filter(row => 
       row.APIStatus === 'success' && row.StudentGuid && row.StudentDetails
     );
 
-    console.log('Students available for update:', studentsToUpdate.length);
-    console.log('Students to update:', studentsToUpdate);
-
     if (studentsToUpdate.length === 0) {
-      const errorMsg = 'No students available for update. Please process the Excel file first.';
-      console.log('Error:', errorMsg);
-      setError(errorMsg);
+      setError('No students available for update. Please process the Excel file first.');
       return;
     }
 
@@ -580,31 +548,16 @@ export default function ExcelUploadPage() {
         <div className="bg-white shadow rounded-lg mb-6">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-4">
-                <div className="h-12 w-12 relative">
-                  <Image
-                    src="/image.png"
-                    alt="Daleel Logo"
-                    fill
-                    className="object-contain"
-                    priority
-                    onError={(e) => {
-                      console.error('Image load error:', e);
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">Daleel Student Management</h1>
-                  <p className="mt-1 text-sm text-gray-600">
-                    Welcome, {user?.fullName?.en || user?.email || 'User'}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Daleel Student Management</h1>
+                <p className="mt-1 text-sm text-gray-600">
+                  Welcome, {user?.fullName?.en || user?.email || 'User'}
+                </p>
+                {user?.roles && user.roles.length > 0 && (
+                  <p className="text-xs text-gray-500">
+                    Role: {user.roles.map(role => role.name.en).join(', ')}
                   </p>
-                  {user?.roles && user.roles.length > 0 && (
-                    <p className="text-xs text-gray-500">
-                      Role: {user.roles.map(role => role.name.en).join(', ')}
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">

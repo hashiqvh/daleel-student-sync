@@ -2,11 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useCookies } from 'react-cookie';
 
 export interface User {
   id: number;
   email: string;
-  ownerId: number;
   fullName: {
     en: string;
     ar: string;
@@ -25,18 +25,16 @@ export interface User {
 export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
-  ownerId: number | null;
-
   token: string | null;
   expires: string | null;
   isLoading: boolean;
 }
 
 export function useAuth() {
+  const [cookies, setCookie, removeCookie] = useCookies(['daleel_token', 'daleel_user', 'daleel_expires']);
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
-    ownerId: null,
     token: null,
     expires: null,
     isLoading: true
@@ -45,16 +43,14 @@ export function useAuth() {
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = localStorage.getItem('daleel_token');
-      const userStr = localStorage.getItem('daleel_user');
-      const expires = localStorage.getItem('daleel_expires');
+      const token = cookies.daleel_token;
+      const userStr = cookies.daleel_user;
+      const expires = cookies.daleel_expires;
 
       if (!token || !userStr || !expires) {
         setAuthState({
           isAuthenticated: false,
           user: null,
-          ownerId: null,
-         
           token: null,
           expires: null,
           isLoading: false
@@ -76,16 +72,14 @@ export function useAuth() {
         const currentTime = new Date().getTime();
         
         if (expiryTime <= currentTime) {
-          // Token expired, clear storage
-          localStorage.removeItem('daleel_token');
-          localStorage.removeItem('daleel_user');
-          localStorage.removeItem('daleel_expires');
+          // Token expired, clear cookies
+          removeCookie('daleel_token');
+          removeCookie('daleel_user');
+          removeCookie('daleel_expires');
           
           setAuthState({
             isAuthenticated: false,
             user: null,
-            ownerId: null,
-           
             token: null,
             expires: null,
             isLoading: false
@@ -96,7 +90,6 @@ export function useAuth() {
         setAuthState({
           isAuthenticated: true,
           user,
-          ownerId: user?.ownerId ?? null,
           token,
           expires,
           isLoading: false
@@ -106,7 +99,6 @@ export function useAuth() {
         setAuthState({
           isAuthenticated: false,
           user: null,
-          ownerId: null,
           token: null,
           expires: null,
           isLoading: false
@@ -120,7 +112,7 @@ export function useAuth() {
     const interval = setInterval(checkAuth, 60000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [cookies, removeCookie]);
 
   const logout = async () => {
     try {
@@ -128,13 +120,12 @@ export function useAuth() {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('daleel_token');
-      localStorage.removeItem('daleel_user');
-      localStorage.removeItem('daleel_expires');
+      removeCookie('daleel_token');
+      removeCookie('daleel_user');
+      removeCookie('daleel_expires');
       setAuthState({
         isAuthenticated: false,
         user: null,
-        ownerId: null,
         token: null,
         expires: null,
         isLoading: false

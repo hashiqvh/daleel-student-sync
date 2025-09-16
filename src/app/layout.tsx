@@ -19,7 +19,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Daleel Student Management",
   description: "Student management system for Daleel API integration",
-  // Deployed at 2025-09-16 07:20:00 UTC
 };
 
 export default function RootLayout({
@@ -30,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-gray-900`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ClientProviders>
           <div className="min-h-screen flex flex-col">

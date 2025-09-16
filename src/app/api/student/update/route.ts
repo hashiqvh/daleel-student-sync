@@ -1,10 +1,9 @@
-import { getAuthData } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export async function PUT(request: NextRequest) {
   try {
-    const { studentGuid, studentData } = await request.json();
+    const { studentGuid, studentData, ownerId } = await request.json();
 
     if (!studentGuid) {
       return NextResponse.json({ error: 'Student GUID is required' }, { status: 400 });
@@ -14,15 +13,15 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Student data is required' }, { status: 400 });
     }
 
-    // Get token from authentication
-    const authData = await getAuthData();
-    if (!authData) {
+    // Get token from cookies
+    const token = request.cookies.get('daleel_token')?.value;
+    if (!token) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const apiBaseUrl = process.env.DALEEL_API_BASE_URL || 'https://api-daleel.spea.shj.ae';
     const yearId = process.env.DALEEL_YEAR_ID || '1052';
-    const ownerId = authData.user.ownerId;
+    const finalOwnerId = ownerId || '1396';
 
     // Ensure studentTalent array contains only talentId values
     if (studentData.studentTalent) {
@@ -51,7 +50,7 @@ export async function PUT(request: NextRequest) {
     // Log the data being sent for debugging
     console.log('=== STUDENT UPDATE DATA ===');
     console.log('Student GUID:', studentGuid);
-    console.log('Owner ID:', ownerId);
+    console.log('Owner ID:', finalOwnerId);
     console.log('Year ID:', yearId);
     console.log('Full Student Data:', JSON.stringify(studentData, null, 2));
     console.log('StudentTalent Array:', studentData.studentTalent);
@@ -61,7 +60,7 @@ export async function PUT(request: NextRequest) {
     const response = await fetch(`${apiBaseUrl}/api/Student/${studentGuid}`, {
       method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${authData.token}`,
+        'Authorization': `Bearer ${token}`,
         'yearId': yearId,
         'Content-Type': 'application/json'
       },

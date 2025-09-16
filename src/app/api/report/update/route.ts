@@ -1,82 +1,109 @@
-import fs from 'fs';
+import { getAuthData } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import * as XLSX from 'xlsx';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-export async function POST(request: NextRequest) {
+export async function PUT(request: NextRequest) {
   try {
-    const { data, filename } = await request.json();
+    const { studentGuid, studentData } = await request.json();
 
-    if (!data || !filename) {
-      return NextResponse.json({ error: 'Data and filename are required' }, { status: 400 });
+    if (!studentGuid) {
+      return NextResponse.json({ error: 'Student GUID is required' }, { status: 400 });
     }
 
-    // Ensure the report directory exists
-    const reportDir = path.join(process.cwd(), 'public', 'report');
-    if (!fs.existsSync(reportDir)) {
-      fs.mkdirSync(reportDir, { recursive: true });
+    if (!studentData) {
+      return NextResponse.json({ error: 'Student data is required' }, { status: 400 });
     }
 
-    const filePath = path.join(reportDir, filename);
-
-    // Create workbook with multiple sheets
-    const wb = XLSX.utils.book_new();
-    
-    // Main data sheet
-    const mainWs = XLSX.utils.json_to_sheet(data.allStudents);
-    XLSX.utils.book_append_sheet(wb, mainWs, 'All Students');
-    
-    // Summary sheet
-    const summaryWs = XLSX.utils.json_to_sheet(data.summary);
-    XLSX.utils.book_append_sheet(wb, summaryWs, 'Summary');
-    
-    // Failed students sheet (if any)
-    if (data.failedStudents && data.failedStudents.length > 0) {
-      const failedWs = XLSX.utils.json_to_sheet(data.failedStudents);
-      XLSX.utils.book_append_sheet(wb, failedWs, 'Failed Students');
+    // Get token from authentication
+    const authData = await getAuthData();
+    if (!authData) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    // Write the file
-    XLSX.writeFile(wb, filePath);
+    const apiBaseUrl = process.env.DALEEL_API_BASE_URL || 'https://api-daleel.spea.shj.ae';
+    const yearId = process.env.DALEEL_YEAR_ID || '1052';
+    const ownerId = authData.user.ownerId;
 
+    // Ensure studentTalent array contains only talentId values
+    if (studentData.studentTalent) {
+      if (Array.isArray(studentData.studentTalent)) {
+        // Filter out any null/undefined values and ensure they're numbers
+        studentData.studentTalent = studentData.studentTalent
+          .map((id: any) => Number(id))
+          .filter((id: number) => !isNaN(id) && id > 0);
+      } else {
+        studentData.studentTalent = [];
+      }
+    } else {
+      studentData.studentTalent = [];
+    }
+    
+    // Ensure all nested objects have proper structure
+    if (studentData.studentPayments && typeof studentData.studentPayments === 'object') {
+      studentData.studentPayments = {
+        fullAmountToBePaid: Number(studentData.studentPayments.fullAmountToBePaid) || 0,
+        paidAmount: Number(studentData.studentPayments.paidAmount) || 0,
+        remainingAmount: Number(studentData.studentPayments.remainingAmount) || 0,
+        accountantComment: String(studentData.studentPayments.accountantComment || '')
+      };
+    }
+    
+    // Log the data being sent for debugging
+    console.log('=== STUDENT UPDATE DATA ===');
+    console.log('Student GUID:', studentGuid);
+    console.log('Owner ID:', ownerId);
+    console.log('Year ID:', yearId);
+    console.log('Full Student Data:', JSON.stringify(studentData, null, 2));
+    console.log('StudentTalent Array:', studentData.studentTalent);
+    console.log('StudentPayments:', studentData.studentPayments);
+    console.log('==========================');
+    
+    const response = await fetch(`${apiBaseUrl}/api/Student/${studentGuid}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${authData.token}`,
+        'yearId': yearId,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(studentData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log('=== STUDENT UPDATE ERROR ===');
+      console.error('Error Status:', response.status);
+      console.error('Error Status Text:', response.statusText);
+      console.error('Error Body:', errorText);
+      console.log('============================');
+      
+      if (response.status === 401) {
+        return NextResponse.json({ 
+          error: 'Authentication failed - JWT token may be expired', 
+          details: 'Please contact support to refresh the API token',
+          status: 'auth_error'
+        }, { status: 401 });
+      }
+      
+      return NextResponse.json({ 
+        error: 'Student update failed', 
+        details: errorText,
+        status: response.status 
+      }, { status: response.status });
+    }
+
+    const data = await response.json();
+    console.log('=== STUDENT UPDATE SUCCESS ===');
+    console.log('Response Status:', response.status);
+    console.log('Response Data:', JSON.stringify(data, null, 2));
+    console.log('==============================');
+    
     return NextResponse.json({ 
       success: true, 
-      message: 'Report updated successfully',
-      filePath: `/report/${filename}`,
-      timestamp: new Date().toISOString()
+      message: 'Student updated successfully',
+      data: data 
     });
   } catch (error) {
-    console.error('Report update error:', error);
-    return NextResponse.json({ error: 'Failed to update report' }, { status: 500 });
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const filename = searchParams.get('filename');
-
-    if (!filename) {
-      return NextResponse.json({ error: 'Filename is required' }, { status: 400 });
-    }
-
-    const filePath = path.join(process.cwd(), 'public', 'report', filename);
-    
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
-    }
-
-    const stats = fs.statSync(filePath);
-    
-    return NextResponse.json({
-      exists: true,
-      filename,
-      size: stats.size,
-      lastModified: stats.mtime.toISOString(),
-      url: `/report/${filename}`
-    });
-  } catch (error) {
-    console.error('Report check error:', error);
-    return NextResponse.json({ error: 'Failed to check report' }, { status: 500 });
+    console.error('Student update API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
