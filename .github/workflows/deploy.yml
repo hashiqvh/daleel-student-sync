@@ -59,6 +59,18 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Prepare server directories
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          set -e
+          # Create directories with proper permissions
+          sudo mkdir -p ${{ env.RELEASES_DIR }}
+          sudo mkdir -p ${{ env.SHARED_DIR }}
+          sudo chown -R ubuntu:ubuntu ${{ env.RELEASES_DIR }}
+          sudo chown -R ubuntu:ubuntu ${{ env.SHARED_DIR }}
+          echo "Directories created successfully"
+          EOF
+
       - name: Upload via rsync
         run: |
           rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
