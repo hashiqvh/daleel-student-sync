@@ -91,6 +91,10 @@ export default function LoginPage() {
               fill
               className="object-contain"
               priority
+              onError={(e) => {
+                console.error('Image load error:', e);
+                e.currentTarget.style.display = 'none';
+              }}
             />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">

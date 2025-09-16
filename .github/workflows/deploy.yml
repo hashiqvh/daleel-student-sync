@@ -62,6 +62,7 @@ jobs:
           remote_user: ${{ secrets.SSH_USER }}
           remote_port: ${{ secrets.SSH_PORT }}
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          rsh: 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
       - name: Finalize on server (symlink + reload)
         uses: appleboy/ssh-action@v1.2.0
@@ -70,6 +71,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_timeout: 5m
           script: |
             set -e
             NEW_RELEASE="${{ env.RELEASES_DIR }}/release_${{ github.run_number }}"

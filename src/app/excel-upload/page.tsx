@@ -557,6 +557,10 @@ export default function ExcelUploadPage() {
                     fill
                     className="object-contain"
                     priority
+                    onError={(e) => {
+                      console.error('Image load error:', e);
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 </div>
                 <div>
