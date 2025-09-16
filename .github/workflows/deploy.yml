@@ -52,51 +52,47 @@ jobs:
           fi
           date +%Y%m%d%H%M%S > deploy_bundle/RELEASE_TAG
 
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
       - name: Upload via rsync
-        uses: burnett01/rsync-deployments@7.0.1
-        with:
-          switches: -az --delete
-          path: deploy_bundle/
-          remote_path: ${{ env.RELEASES_DIR }}/release_${{ github.run_number }}
-          remote_host: ${{ secrets.SSH_HOST }}
-          remote_user: ${{ secrets.SSH_USER }}
-          remote_port: ${{ secrets.SSH_PORT }}
-          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          rsh: 'ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+        run: |
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            deploy_bundle/ \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ env.RELEASES_DIR }}/release_${{ github.run_number }}/
 
       - name: Finalize on server (symlink + reload)
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script_timeout: 5m
-          script: |
-            set -e
-            NEW_RELEASE="${{ env.RELEASES_DIR }}/release_${{ github.run_number }}"
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          set -e
+          NEW_RELEASE="${{ env.RELEASES_DIR }}/release_${{ github.run_number }}"
 
-            # Ensure shared env exists and link it
-            if [ ! -f "${{ env.SHARED_DIR }}/.env" ]; then
-              echo "Missing ${{ env.SHARED_DIR }}/.env"; exit 1
+          # Ensure shared env exists and link it
+          if [ ! -f "${{ env.SHARED_DIR }}/.env" ]; then
+            echo "Missing ${{ env.SHARED_DIR }}/.env"; exit 1
+          fi
+          ln -sf "${{ env.SHARED_DIR }}/.env" "${NEW_RELEASE}/.env"
+
+          # For non-standalone, install prod deps on server
+          if [ ! -d "${NEW_RELEASE}/node_modules" ] && [ -f "${NEW_RELEASE}/package.json" ]; then
+            cd "${NEW_RELEASE}"
+            if command -v npm >/dev/null 2>&1; then
+              npm ci --omit=dev || npm i --omit=dev
             fi
-            ln -sf "${{ env.SHARED_DIR }}/.env" "${NEW_RELEASE}/.env"
+          fi
 
-            # For non-standalone, install prod deps on server
-            if [ ! -d "${NEW_RELEASE}/node_modules" ] && [ -f "${NEW_RELEASE}/package.json" ]; then
-              cd "${NEW_RELEASE}"
-              if command -v npm >/dev/null 2>&1; then
-                npm ci --omit=dev || npm i --omit=dev
-              fi
-            fi
+          # Flip current -> new release atomically
+          ln -sfn "${NEW_RELEASE}" "${{ env.CURRENT_LINK }}"
 
-            # Flip current -> new release atomically
-            ln -sfn "${NEW_RELEASE}" "${{ env.CURRENT_LINK }}"
-
-            # PM2 reload (zero downtime) or start first time
-            if pm2 describe "${{ env.APP_NAME }}" >/dev/null 2>&1; then
-              pm2 reload "${{ env.APP_NAME }}"
-            else
-              pm2 start /home/ubuntu/ecosystem.config.js
-            fi
-            pm2 save
+          # PM2 reload (zero downtime) or start first time
+          if pm2 describe "${{ env.APP_NAME }}" >/dev/null 2>&1; then
+            pm2 reload "${{ env.APP_NAME }}"
+          else
+            pm2 start /home/ubuntu/ecosystem.config.js
+          fi
+          pm2 save
+          EOF
