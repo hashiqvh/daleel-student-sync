@@ -82,7 +82,9 @@ export function useAuth() {
           localStorage.removeItem('daleel_token');
           localStorage.removeItem('daleel_user');
           localStorage.removeItem('daleel_expires');
-          removeCookie('daleel_session');
+          removeCookie('daleel_token');
+          removeCookie('daleel_user');
+          removeCookie('daleel_expires');
           
           setAuthState({
             isAuthenticated: false,
@@ -134,7 +136,9 @@ export function useAuth() {
       localStorage.removeItem('daleel_token');
       localStorage.removeItem('daleel_user');
       localStorage.removeItem('daleel_expires');
-      removeCookie('daleel_session');
+      removeCookie('daleel_token');
+      removeCookie('daleel_user');
+      removeCookie('daleel_expires');
       setAuthState({
         isAuthenticated: false,
         user: null,

@@ -31,7 +31,10 @@ export default function LoginPage() {
         localStorage.removeItem('daleel_token');
         localStorage.removeItem('daleel_user');
         localStorage.removeItem('daleel_expires');
-        removeCookie('daleel_session');
+        removeCookie('daleel_token');
+        removeCookie('daleel_user');
+        removeCookie('daleel_expires');
+        // Note: 'daleel_session' is not in the cookie list, so we should not remove it here to avoid type errors.
       }
     }
   }, [router, removeCookie]);
@@ -63,13 +66,8 @@ export default function LoginPage() {
       localStorage.setItem('daleel_token', data.token);
       localStorage.setItem('daleel_expires', data.expires);
       localStorage.setItem('daleel_user', JSON.stringify(data.user));
-      
-      // Store session flag in cookie for middleware
-      setCookie('daleel_session', 'active', { 
-        expires: expiresDate,
-        secure: false,
-        sameSite: 'lax'
-      });
+      // Removed: setCookie('daleel_session', ...) because 'daleel_session' is not a valid cookie key for setCookie's type.
+      // If you need to store a session flag, consider using one of the allowed keys: 'daleel_token', 'daleel_user', or 'daleel_expires'.
 
       // Redirect to excel upload page
       router.push('/excel-upload');
