@@ -1,4 +1,3 @@
-import { getAuthData } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -125,25 +124,24 @@ export async function GET(request: NextRequest) {
     const collected = searchParams.get('collected');
     const balance = searchParams.get('balance');
     const studentNumber = searchParams.get('studentNumber');
+    const token = searchParams.get('token');
+    const ownerId = searchParams.get('ownerId');
 
     if (!studentGuid) {
       return NextResponse.json({ error: 'Student GUID is required' }, { status: 400 });
     }
 
-    // Get token from authentication
-    const authData = await getAuthData();
-    if (!authData) {
+    if (!token || !ownerId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const apiBaseUrl = process.env.DALEEL_API_BASE_URL || 'https://api-daleel.spea.shj.ae';
     const yearId = process.env.DALEEL_YEAR_ID || '1052';
-    const ownerId = authData.user.ownerId;
 
     const response = await fetch(`${apiBaseUrl}/api/Student/${studentGuid}?schoolYearId=`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${authData.token}`,
+        'Authorization': `Bearer ${token}`,
         'yearId': yearId,
         'Accept': 'application/json'
       }

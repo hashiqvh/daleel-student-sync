@@ -2,11 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useCookies } from 'react-cookie';
 
 export interface User {
   id: number;
   email: string;
+  ownerId: number;
   fullName: {
     en: string;
     ar: string;
@@ -25,113 +25,88 @@ export interface User {
 export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
+  ownerId: number | null;
   token: string | null;
   expires: string | null;
   isLoading: boolean;
 }
 
 export function useAuth() {
-  const [cookies, setCookie, removeCookie] = useCookies(['daleel_token', 'daleel_user', 'daleel_expires']);
+  const router = useRouter();
+
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
+    ownerId: null,
     token: null,
     expires: null,
     isLoading: true
   });
-  const router = useRouter();
 
   useEffect(() => {
-    const checkAuth = () => {
-      const token = cookies.daleel_token;
-      const userStr = cookies.daleel_user;
-      const expires = cookies.daleel_expires;
+    // Check localStorage for stored auth data
+    const token = localStorage.getItem('daleel_token');
+    const userStr = localStorage.getItem('daleel_user');
+    const ownerId = localStorage.getItem('daleel_ownerId');
+    const expires = localStorage.getItem('daleel_expires');
 
-      if (!token || !userStr || !expires) {
-        setAuthState({
-          isAuthenticated: false,
-          user: null,
-          token: null,
-          expires: null,
-          isLoading: false
-        });
-        return;
-      }
-
+    if (token && userStr && ownerId) {
       try {
-        // Parse user data - handle both string and object cases
-        let user;
-        if (typeof userStr === 'string') {
-          user = JSON.parse(userStr);
-        } else {
-          user = userStr; // Already an object
-        }
-        
-        // Check if token is expired
-        const expiryTime = new Date(expires).getTime();
-        const currentTime = new Date().getTime();
-        
-        if (expiryTime <= currentTime) {
-          // Token expired, clear cookies
-          removeCookie('daleel_token');
-          removeCookie('daleel_user');
-          removeCookie('daleel_expires');
-          
-          setAuthState({
-            isAuthenticated: false,
-            user: null,
-            token: null,
-            expires: null,
-            isLoading: false
-          });
-          return;
-        }
-
+        const user = JSON.parse(userStr);
         setAuthState({
           isAuthenticated: true,
           user,
+          ownerId: parseInt(ownerId) || 1413, // fallback to default ownerId
           token,
           expires,
           isLoading: false
         });
       } catch (error) {
         console.error('Error parsing user data:', error);
+        // Clear invalid data
+        localStorage.removeItem('daleel_token');
+        localStorage.removeItem('daleel_user');
+        localStorage.removeItem('daleel_ownerId');
+        localStorage.removeItem('daleel_expires');
         setAuthState({
           isAuthenticated: false,
           user: null,
+          ownerId: null,
           token: null,
           expires: null,
           isLoading: false
         });
       }
-    };
-
-    checkAuth();
-
-    // Check for token expiry every minute
-    const interval = setInterval(checkAuth, 60000);
-    
-    return () => clearInterval(interval);
-  }, [cookies, removeCookie]);
-
-  const logout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      removeCookie('daleel_token');
-      removeCookie('daleel_user');
-      removeCookie('daleel_expires');
+    } else {
       setAuthState({
         isAuthenticated: false,
         user: null,
+        ownerId: null,
         token: null,
         expires: null,
         isLoading: false
       });
-      router.push('/login');
     }
+  }, []);
+
+  const logout = async () => {
+    // Clear localStorage
+    localStorage.removeItem('daleel_token');
+    localStorage.removeItem('daleel_user');
+    localStorage.removeItem('daleel_ownerId');
+    localStorage.removeItem('daleel_expires');
+    
+    // Reset auth state
+    setAuthState({
+      isAuthenticated: false,
+      user: null,
+      ownerId: null,
+      token: null,
+      expires: null,
+      isLoading: false
+    });
+    
+    router.push('/login');
   };
 
   const getTimeUntilExpiry = (): number => {

@@ -49,12 +49,21 @@ export default function ExcelUploadPage() {
 
   const fetchStudentDetails = async (studentGuid: string, totalFee: number, collected: number, balance: number, studentNumber: number): Promise<any> => {
     try {
+      const token = localStorage.getItem('daleel_token');
+      const ownerId = localStorage.getItem('daleel_ownerId');
+      
+      if (!token || !ownerId) {
+        return null;
+      }
+
       const params = new URLSearchParams({
         studentGuid: studentGuid,
         totalFee: totalFee.toString(),
         collected: collected.toString(),
         balance: balance.toString(),
-        studentNumber: studentNumber.toString()
+        studentNumber: studentNumber.toString(),
+        token: token,
+        ownerId: ownerId
       });
       
       const response = await fetch(`/api/student/details?${params}`);
@@ -73,6 +82,13 @@ export default function ExcelUploadPage() {
 
   const updateStudentData = async (studentGuid: string, studentData: any): Promise<{ success: boolean; message: string }> => {
     try {
+      const token = localStorage.getItem('daleel_token');
+      const ownerId = localStorage.getItem('daleel_ownerId');
+      
+      if (!token || !ownerId) {
+        return { success: false, message: 'Authentication required' };
+      }
+
       const response = await fetch('/api/student/update', {
         method: 'PUT',
         headers: {
@@ -80,7 +96,9 @@ export default function ExcelUploadPage() {
         },
         body: JSON.stringify({
           studentGuid: studentGuid,
-          studentData: studentData
+          studentData: studentData,
+          token: token,
+          ownerId: parseInt(ownerId) || 1413
         })
       });
 
@@ -99,12 +117,24 @@ export default function ExcelUploadPage() {
 
   const fetchStudentData = async (ministryNumber: string): Promise<{ studentGuid?: string; status: 'success' | 'not_found' | 'error' }> => {
     try {
+      const token = localStorage.getItem('daleel_token');
+      const ownerId = localStorage.getItem('daleel_ownerId');
+      
+      if (!token || !ownerId) {
+        setError('Authentication required. Please log in again.');
+        return { status: 'error' };
+      }
+
       const response = await fetch('/api/student/search', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ ministryNumber })
+        body: JSON.stringify({ 
+          ministryNumber,
+          token,
+          ownerId: parseInt(ownerId) || 1413
+        })
       });
 
       if (!response.ok) {

@@ -1,8 +1,8 @@
 'use client';
 
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useCookies } from 'react-cookie';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -10,26 +10,16 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [cookies, setCookie, removeCookie] = useCookies(['daleel_token', 'daleel_user', 'daleel_expires']);
   const router = useRouter();
 
   // Check if user is already logged in
   useEffect(() => {
-    if (cookies.daleel_token && cookies.daleel_expires) {
-      const expiryTime = new Date(cookies.daleel_expires).getTime();
-      const currentTime = new Date().getTime();
-      
-      if (expiryTime > currentTime) {
-        // Token is still valid, redirect to dashboard
-        router.push('/excel-upload');
-      } else {
-        // Token expired, clear cookies
-        removeCookie('daleel_token');
-        removeCookie('daleel_user');
-        removeCookie('daleel_expires');
-      }
+    const token = localStorage.getItem('daleel_token');
+    const user = localStorage.getItem('daleel_user');
+    if (token && user) {
+      router.push('/excel-upload');
     }
-  }, [cookies, router, removeCookie]);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,28 +41,19 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Set cookies with token and expiry
-      const expiresDate = new Date(data.expires);
-      setCookie('daleel_token', data.token, { 
-        expires: expiresDate,
-        secure: true,
-        sameSite: 'strict'
-      });
-      setCookie('daleel_user', JSON.stringify(data.user), { 
-        expires: expiresDate,
-        secure: true,
-        sameSite: 'strict'
-      });
-      setCookie('daleel_expires', data.expires, { 
-        expires: expiresDate,
-        secure: true,
-        sameSite: 'strict'
-      });
+      // Store token and user data in localStorage
+      localStorage.setItem('daleel_token', data.token);
+      localStorage.setItem('daleel_user', JSON.stringify(data.user));
+      localStorage.setItem('daleel_ownerId', (data.ownerId || data.user?.ownerId || '1413').toString());
+      localStorage.setItem('daleel_expires', data.expires);
 
       // Redirect to excel upload page
       router.push('/excel-upload');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+    } catch (error: any) {
+      setError(error.message || 'Login failed');
+      setTimeout(() => {
+        setError('');
+      }, 5000);
     } finally {
       setIsLoading(false);
     }
@@ -83,10 +64,18 @@ export default function LoginPage() {
       <div className="max-w-md w-full">
         {/* Logo and Header */}
         <div className="text-center mb-8">
-          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-indigo-600 to-blue-600 rounded-full flex items-center justify-center mb-4">
-            <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
+          <div className="mx-auto h-16 w-16 relative mb-4">
+            <Image
+              src="/image.png"
+              alt="Daleel Logo"
+              fill
+              className="object-contain"
+              priority
+              onError={(e) => {
+                console.error('Image load error:', e);
+                e.currentTarget.style.display = 'none';
+              }}
+            />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Daleel Student Management
@@ -164,7 +153,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 animate-pulse">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -172,7 +161,8 @@ export default function LoginPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-red-800">{error}</p>
+                    <p className="text-sm font-medium text-red-800">{error}</p>
+                    <p className="text-xs text-red-600 mt-1">This error will disappear in a few seconds</p>
                   </div>
                 </div>
               </div>
@@ -181,7 +171,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 transform hover:scale-[1.02]"
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
             >
               {isLoading ? (
                 <>

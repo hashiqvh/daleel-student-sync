@@ -39,14 +39,14 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     console.log('Daleel Login Success:', {
-      ownerId: data.ownerId,
+      ownerId: data.user?.ownerId,
       userId: data.userId,
       tokenLength: data.token?.length,
       expires: data.expires
     });
 
     return NextResponse.json({
-      ownerId: data.ownerId,
+      ownerId: data.user?.ownerId,
       userId: data.userId,
       token: data.token,
       user: data.user,

@@ -1,28 +1,24 @@
-import { getAuthData } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { ministryNumber } = await request.json();
+    const { ministryNumber, token, ownerId } = await request.json();
 
     if (!ministryNumber) {
       return NextResponse.json({ error: 'Ministry number is required' }, { status: 400 });
     }
 
-    // Get token from authentication
-    const authData = await getAuthData();
-    if (!authData) {
+    if (!token || !ownerId) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const apiBaseUrl = process.env.DALEEL_API_BASE_URL || 'https://api-daleel.spea.shj.ae';
     const yearId = process.env.DALEEL_YEAR_ID || '1052';
-    const ownerId = authData.user.ownerId;
 
     const response = await fetch(`${apiBaseUrl}/api/Student/students/${ownerId}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${authData.token}`,
+        'Authorization': `Bearer ${token}`,
         'yearId': yearId,
         'Content-Type': 'application/json',
         'Accept': 'application/json'
