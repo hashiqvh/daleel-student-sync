@@ -15,7 +15,6 @@
     "@types/react-dom": "^19",
     "next": "15.5.3",
     "react": "19.1.0",
-    "react-cookie": "^8.0.1",
     "react-dom": "19.1.0",
     "react-dropzone": "^14.3.8",
     "tailwindcss": "^4",

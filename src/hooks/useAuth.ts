@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useCookies } from 'react-cookie';
 
 export interface User {
   id: number;
@@ -34,7 +33,6 @@ export interface AuthState {
 }
 
 export function useAuth() {
-  const [cookies, setCookie, removeCookie] = useCookies(['daleel_token', 'daleel_user', 'daleel_expires']);
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -82,9 +80,6 @@ export function useAuth() {
           localStorage.removeItem('daleel_token');
           localStorage.removeItem('daleel_user');
           localStorage.removeItem('daleel_expires');
-          removeCookie('daleel_token');
-          removeCookie('daleel_user');
-          removeCookie('daleel_expires');
           
           setAuthState({
             isAuthenticated: false,
@@ -125,7 +120,7 @@ export function useAuth() {
     const interval = setInterval(checkAuth, 60000);
     
     return () => clearInterval(interval);
-  }, [cookies, removeCookie]);
+  }, []);
 
   const logout = async () => {
     try {
@@ -136,9 +131,6 @@ export function useAuth() {
       localStorage.removeItem('daleel_token');
       localStorage.removeItem('daleel_user');
       localStorage.removeItem('daleel_expires');
-      removeCookie('daleel_token');
-      removeCookie('daleel_user');
-      removeCookie('daleel_expires');
       setAuthState({
         isAuthenticated: false,
         user: null,

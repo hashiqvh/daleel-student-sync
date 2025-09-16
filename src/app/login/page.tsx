@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useCookies } from 'react-cookie';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -11,7 +10,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [cookies, setCookie, removeCookie] = useCookies(['daleel_token', 'daleel_user', 'daleel_expires']);
   const router = useRouter();
 
   // Check if user is already logged in
@@ -31,13 +29,9 @@ export default function LoginPage() {
         localStorage.removeItem('daleel_token');
         localStorage.removeItem('daleel_user');
         localStorage.removeItem('daleel_expires');
-        removeCookie('daleel_token');
-        removeCookie('daleel_user');
-        removeCookie('daleel_expires');
-        // Note: 'daleel_session' is not in the cookie list, so we should not remove it here to avoid type errors.
       }
     }
-  }, [router, removeCookie]);
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,15 +53,10 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Store token in localStorage (no size limit) and session info in cookies
-      const expiresDate = new Date(data.expires);
-      
-      // Store large token in localStorage
+      // Store token in localStorage (no size limit)
       localStorage.setItem('daleel_token', data.token);
       localStorage.setItem('daleel_expires', data.expires);
       localStorage.setItem('daleel_user', JSON.stringify(data.user));
-      // Removed: setCookie('daleel_session', ...) because 'daleel_session' is not a valid cookie key for setCookie's type.
-      // If you need to store a session flag, consider using one of the allowed keys: 'daleel_token', 'daleel_user', or 'daleel_expires'.
 
       // Redirect to excel upload page
       router.push('/excel-upload');

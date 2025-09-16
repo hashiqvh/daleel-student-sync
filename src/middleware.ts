@@ -5,18 +5,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Skip middleware for login page and API routes
-  if (pathname === '/login' || pathname.startsWith('/api/auth/')) {
+  if (pathname === '/login' || pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
-  // Check for session cookie (token is stored in localStorage)
-  const session = request.cookies.get('daleel_session')?.value;
-
-  // If no session, redirect to login
-  if (!session) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
+  // Since we're using localStorage for authentication,
+  // the client-side will handle redirects based on token presence
+  // This middleware now only protects API routes (which check Authorization header)
   return NextResponse.next();
 }
 
