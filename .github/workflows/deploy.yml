@@ -13,6 +13,8 @@ jobs:
       RELEASES_DIR: /var/www/daleel/releases
       SHARED_DIR: /var/www/daleel/shared
       CURRENT_LINK: /var/www/daleel/current
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: 1
 
     steps:
       - name: Checkout
@@ -22,13 +24,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ vars.NODE_VERSION || '20.x' }}
-          cache: 'yarn'
+          cache: npm     # <-- npm cache, looks for package-lock.json
 
       - name: Install deps
-        run: yarn --frozen-lockfile
+        run: npm ci     # <-- requires committed package-lock.json
 
       - name: Build
-        run: yarn build
+        run: npm run build
 
       - name: Prepare artifact
         run: |
@@ -37,8 +39,8 @@ jobs:
             # Standalone deploy (recommended)
             rsync -a .next/standalone/ deploy_bundle/
             rsync -a public/ deploy_bundle/public/ || true
-            rsync -a .next/static/ deploy_bundle/.next/static/
-            cp package.json yarn.lock deploy_bundle/
+            rsync -a .next/static/ deploy_bundle/.next/static/ || true
+            cp package.json package-lock.json deploy_bundle/
           else
             # Fallback: non-standalone (heavier)
             rsync -a \
@@ -70,31 +72,30 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -e
-            NEW_RELEASE=${RELEASES_DIR}/release_${{ github.run_number }}
+            NEW_RELEASE="${{ env.RELEASES_DIR }}/release_${{ github.run_number }}"
 
-            # Ensure shared env exists
-            if [ ! -f "${SHARED_DIR}/.env" ]; then
-              echo "Missing ${SHARED_DIR}/.env"; exit 1
+            # Ensure shared env exists and link it
+            if [ ! -f "${{ env.SHARED_DIR }}/.env" ]; then
+              echo "Missing ${{ env.SHARED_DIR }}/.env"; exit 1
             fi
-            ln -sf ${SHARED_DIR}/.env ${NEW_RELEASE}/.env
+            ln -sf "${{ env.SHARED_DIR }}/.env" "${NEW_RELEASE}/.env"
 
             # For non-standalone, install prod deps on server
             if [ ! -d "${NEW_RELEASE}/node_modules" ] && [ -f "${NEW_RELEASE}/package.json" ]; then
-              cd ${NEW_RELEASE}
-              if command -v yarn >/dev/null 2>&1; then
-                yarn --production --frozen-lockfile || yarn --production
-              else
+              cd "${NEW_RELEASE}"
+              if command -v npm >/dev/null 2>&1; then
                 npm ci --omit=dev || npm i --omit=dev
               fi
             fi
 
             # Flip current -> new release atomically
-            ln -sfn ${NEW_RELEASE} ${CURRENT_LINK}
+            ln -sfn "${NEW_RELEASE}" "${{ env.CURRENT_LINK }}"
 
             # PM2 reload (zero downtime) or start first time
-            if pm2 describe ${APP_NAME} >/dev/null 2>&1; then
-              pm2 reload ${APP_NAME}
+            if pm2 describe "${{ env.APP_NAME }}" >/dev/null 2>&1; then
+              pm2 reload "${{ env.APP_NAME }}"
             else
               pm2 start /home/ubuntu/ecosystem.config.js
             fi
             pm2 save
+
