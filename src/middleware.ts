@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
   // Check for authentication cookies
   const token = request.cookies.get('daleel_token')?.value;
   const expires = request.cookies.get('daleel_expires')?.value;
-
+// test update
   // If no token or expires, redirect to login
   if (!token || !expires) {
     return NextResponse.redirect(new URL('/login', request.url));
