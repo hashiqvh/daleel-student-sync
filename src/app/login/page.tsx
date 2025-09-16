@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -49,8 +50,12 @@ export default function LoginPage() {
 
       // Redirect to excel upload page
       router.push('/excel-upload');
-    } catch (error: any) {
-      setError(error.message || 'Login failed');
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'message' in error) {
+        setError((error as { message?: string }).message || 'Login failed');
+      } else {
+        setError('Login failed');
+      }
       setTimeout(() => {
         setError('');
       }, 5000);
