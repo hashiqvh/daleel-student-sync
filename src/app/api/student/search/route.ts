@@ -1,4 +1,3 @@
-import { getAuthData } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -9,20 +8,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Ministry number is required' }, { status: 400 });
     }
 
-    // Get token from authentication
-    const authData = await getAuthData();
-    if (!authData) {
+    // Get token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+    const token = authHeader.substring(7);
 
     const apiBaseUrl = process.env.DALEEL_API_BASE_URL || 'https://api-daleel.spea.shj.ae';
     const yearId = process.env.DALEEL_YEAR_ID || '1052';
-    const ownerId = authData.user.ownerId;
+    const ownerId = process.env.DALEEL_OWNER_ID || '1413';
 
     const response = await fetch(`${apiBaseUrl}/api/Student/students/${ownerId}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${authData.token}`,
+        'Authorization': `Bearer ${token}`,
         'yearId': yearId,
         'Content-Type': 'application/json',
         'Accept': 'application/json'

@@ -16,21 +16,25 @@ export default function LoginPage() {
 
   // Check if user is already logged in
   useEffect(() => {
-    if (cookies.daleel_token && cookies.daleel_expires) {
-      const expiryTime = new Date(cookies.daleel_expires).getTime();
+    const token = localStorage.getItem('daleel_token');
+    const expires = localStorage.getItem('daleel_expires');
+    
+    if (token && expires) {
+      const expiryTime = new Date(expires).getTime();
       const currentTime = new Date().getTime();
       
       if (expiryTime > currentTime) {
         // Token is still valid, redirect to dashboard
         router.push('/excel-upload');
       } else {
-        // Token expired, clear cookies
-        removeCookie('daleel_token');
-        removeCookie('daleel_user');
-        removeCookie('daleel_expires');
+        // Token expired, clear storage
+        localStorage.removeItem('daleel_token');
+        localStorage.removeItem('daleel_user');
+        localStorage.removeItem('daleel_expires');
+        removeCookie('daleel_session');
       }
     }
-  }, [cookies, router, removeCookie]);
+  }, [router, removeCookie]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,21 +56,18 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Set cookies with token and expiry
+      // Store token in localStorage (no size limit) and session info in cookies
       const expiresDate = new Date(data.expires);
-      setCookie('daleel_token', data.token, { 
+      
+      // Store large token in localStorage
+      localStorage.setItem('daleel_token', data.token);
+      localStorage.setItem('daleel_expires', data.expires);
+      localStorage.setItem('daleel_user', JSON.stringify(data.user));
+      
+      // Store session flag in cookie for middleware
+      setCookie('daleel_session', 'active', { 
         expires: expiresDate,
-        secure: false, // Firefox compatibility - set to false for HTTP
-        sameSite: 'lax' // Firefox compatibility - use 'lax' instead of 'strict'
-      });
-      setCookie('daleel_user', JSON.stringify(data.user), { 
-        expires: expiresDate,
-        secure: false, // Firefox compatibility
-        sameSite: 'lax'
-      });
-      setCookie('daleel_expires', data.expires, { 
-        expires: expiresDate,
-        secure: false, // Firefox compatibility
+        secure: false,
         sameSite: 'lax'
       });
 

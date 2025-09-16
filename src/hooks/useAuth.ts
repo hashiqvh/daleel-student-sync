@@ -47,9 +47,9 @@ export function useAuth() {
 
   useEffect(() => {
     const checkAuth = () => {
-      const token = cookies.daleel_token;
-      const userStr = cookies.daleel_user;
-      const expires = cookies.daleel_expires;
+      const token = localStorage.getItem('daleel_token');
+      const userStr = localStorage.getItem('daleel_user');
+      const expires = localStorage.getItem('daleel_expires');
 
       if (!token || !userStr || !expires) {
         setAuthState({
@@ -78,10 +78,11 @@ export function useAuth() {
         const currentTime = new Date().getTime();
         
         if (expiryTime <= currentTime) {
-          // Token expired, clear cookies
-          removeCookie('daleel_token');
-          removeCookie('daleel_user');
-          removeCookie('daleel_expires');
+          // Token expired, clear storage
+          localStorage.removeItem('daleel_token');
+          localStorage.removeItem('daleel_user');
+          localStorage.removeItem('daleel_expires');
+          removeCookie('daleel_session');
           
           setAuthState({
             isAuthenticated: false,
@@ -130,9 +131,10 @@ export function useAuth() {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      removeCookie('daleel_token');
-      removeCookie('daleel_user');
-      removeCookie('daleel_expires');
+      localStorage.removeItem('daleel_token');
+      localStorage.removeItem('daleel_user');
+      localStorage.removeItem('daleel_expires');
+      removeCookie('daleel_session');
       setAuthState({
         isAuthenticated: false,
         user: null,

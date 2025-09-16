@@ -36,6 +36,16 @@ interface StudentAPIResponse {
 
 export default function ExcelUploadPage() {
   const { user, logout, getTimeUntilExpiry, isTokenExpired } = useAuth();
+  
+  // Helper function to get auth headers
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('daleel_token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  };
+  
   const [excelData, setExcelData] = useState<ExcelRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isProcessingAPI, setIsProcessingAPI] = useState(false);
@@ -58,7 +68,9 @@ export default function ExcelUploadPage() {
         studentNumber: studentNumber.toString()
       });
       
-      const response = await fetch(`/api/student/details?${params}`);
+      const response = await fetch(`/api/student/details?${params}`, {
+        headers: getAuthHeaders()
+      });
 
       if (!response.ok) {
         return null;
@@ -76,9 +88,7 @@ export default function ExcelUploadPage() {
     try {
       const response = await fetch('/api/student/update', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           studentGuid: studentGuid,
           studentData: studentData
@@ -102,9 +112,7 @@ export default function ExcelUploadPage() {
     try {
       const response = await fetch('/api/student/search', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ ministryNumber })
       });
 

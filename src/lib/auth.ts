@@ -1,4 +1,3 @@
-import { cookies } from 'next/headers';
 
 export interface User {
   id: number;
@@ -27,36 +26,9 @@ export interface AuthData {
 
 export async function getAuthData(): Promise<AuthData | null> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('daleel_token')?.value;
-    const userStr = cookieStore.get('daleel_user')?.value;
-    const expires = cookieStore.get('daleel_expires')?.value;
-
-    if (!token || !userStr || !expires) {
-      return null;
-    }
-
-    // Parse user data - handle both string and object cases
-    let user;
-    if (typeof userStr === 'string') {
-      user = JSON.parse(userStr);
-    } else {
-      user = userStr; // Already an object
-    }
-    
-    // Check if token is expired
-    const expiryTime = new Date(expires).getTime();
-    const currentTime = new Date().getTime();
-    
-    if (expiryTime <= currentTime) {
-      return null; // Token expired
-    }
-
-    return {
-      token,
-      user,
-      expires
-    };
+    // For server-side, we'll need to get token from request headers
+    // This function will be called from API routes that have access to request
+    return null; // This will be handled in individual API routes
   } catch (error) {
     console.error('Error getting auth data:', error);
     return null;

@@ -9,26 +9,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for authentication cookies
-  const token = request.cookies.get('daleel_token')?.value;
-  const expires = request.cookies.get('daleel_expires')?.value;
+  // Check for session cookie (token is stored in localStorage)
+  const session = request.cookies.get('daleel_session')?.value;
 
-  // If no token or expires, redirect to login
-  if (!token || !expires) {
+  // If no session, redirect to login
+  if (!session) {
     return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  // Check if token is expired
-  const expiryTime = new Date(expires).getTime();
-  const currentTime = new Date().getTime();
-  
-  if (expiryTime <= currentTime) {
-    // Token expired, clear cookies and redirect to login
-    const response = NextResponse.redirect(new URL('/login', request.url));
-    response.cookies.set('daleel_token', '', { expires: new Date(0) });
-    response.cookies.set('daleel_user', '', { expires: new Date(0) });
-    response.cookies.set('daleel_expires', '', { expires: new Date(0) });
-    return response;
   }
 
   return NextResponse.next();
