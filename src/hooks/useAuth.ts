@@ -7,6 +7,7 @@ import { useCookies } from 'react-cookie';
 export interface User {
   id: number;
   email: string;
+  ownerId: number;
   fullName: {
     en: string;
     ar: string;
@@ -25,6 +26,8 @@ export interface User {
 export interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
+  ownerId: number | null;
+
   token: string | null;
   expires: string | null;
   isLoading: boolean;
@@ -35,6 +38,7 @@ export function useAuth() {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
+    ownerId: null,
     token: null,
     expires: null,
     isLoading: true
@@ -51,6 +55,8 @@ export function useAuth() {
         setAuthState({
           isAuthenticated: false,
           user: null,
+          ownerId: null,
+         
           token: null,
           expires: null,
           isLoading: false
@@ -80,6 +86,8 @@ export function useAuth() {
           setAuthState({
             isAuthenticated: false,
             user: null,
+            ownerId: null,
+           
             token: null,
             expires: null,
             isLoading: false
@@ -90,6 +98,7 @@ export function useAuth() {
         setAuthState({
           isAuthenticated: true,
           user,
+          ownerId: user?.ownerId ?? null,
           token,
           expires,
           isLoading: false
@@ -99,6 +108,7 @@ export function useAuth() {
         setAuthState({
           isAuthenticated: false,
           user: null,
+          ownerId: null,
           token: null,
           expires: null,
           isLoading: false
@@ -126,6 +136,7 @@ export function useAuth() {
       setAuthState({
         isAuthenticated: false,
         user: null,
+        ownerId: null,
         token: null,
         expires: null,
         isLoading: false

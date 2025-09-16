@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
+import Image from 'next/image';
 import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import * as XLSX from 'xlsx';
@@ -548,16 +549,27 @@ export default function ExcelUploadPage() {
         <div className="bg-white shadow rounded-lg mb-6">
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex justify-between items-center">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Daleel Student Management</h1>
-                <p className="mt-1 text-sm text-gray-600">
-                  Welcome, {user?.fullName?.en || user?.email || 'User'}
-                </p>
-                {user?.roles && user.roles.length > 0 && (
-                  <p className="text-xs text-gray-500">
-                    Role: {user.roles.map(role => role.name.en).join(', ')}
+              <div className="flex items-center space-x-4">
+                <div className="h-12 w-12 relative">
+                  <Image
+                    src="/image.png"
+                    alt="Daleel Logo"
+                    fill
+                    className="object-contain"
+                    priority
+                  />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">Daleel Student Management</h1>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Welcome, {user?.fullName?.en || user?.email || 'User'}
                   </p>
-                )}
+                  {user?.roles && user.roles.length > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Role: {user.roles.map(role => role.name.en).join(', ')}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-600">
