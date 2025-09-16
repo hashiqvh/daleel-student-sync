@@ -56,24 +56,30 @@ export default function LoginPage() {
       const expiresDate = new Date(data.expires);
       setCookie('daleel_token', data.token, { 
         expires: expiresDate,
-        secure: true,
-        sameSite: 'strict'
+        secure: false, // Firefox compatibility - set to false for HTTP
+        sameSite: 'lax' // Firefox compatibility - use 'lax' instead of 'strict'
       });
       setCookie('daleel_user', JSON.stringify(data.user), { 
         expires: expiresDate,
-        secure: true,
-        sameSite: 'strict'
+        secure: false, // Firefox compatibility
+        sameSite: 'lax'
       });
       setCookie('daleel_expires', data.expires, { 
         expires: expiresDate,
-        secure: true,
-        sameSite: 'strict'
+        secure: false, // Firefox compatibility
+        sameSite: 'lax'
       });
 
       // Redirect to excel upload page
       router.push('/excel-upload');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+      setError(errorMessage);
+      
+      // Clear error after 5 seconds for better UX
+      setTimeout(() => {
+        setError('');
+      }, 5000);
     } finally {
       setIsLoading(false);
     }
@@ -173,7 +179,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 animate-pulse">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -181,7 +187,8 @@ export default function LoginPage() {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-red-800">{error}</p>
+                    <p className="text-sm font-medium text-red-800">{error}</p>
+                    <p className="text-xs text-red-600 mt-1">This error will disappear in a few seconds</p>
                   </div>
                 </div>
               </div>
@@ -190,7 +197,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200 transform hover:scale-[1.02]"
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
             >
               {isLoading ? (
                 <>
