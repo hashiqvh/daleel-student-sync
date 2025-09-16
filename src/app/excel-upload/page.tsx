@@ -118,14 +118,23 @@ export default function ExcelUploadPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Student Search API Error:', errorData);
         if (response.status === 401) {
           setError('Authentication failed: JWT token may be expired. Please contact support to refresh the API token.');
         }
         return { status: 'error' };
       }
 
-      const data = await response.json();
-      return data;
+      const data: StudentAPIResponse = await response.json();
+      console.log('Search response data:', data);
+      
+      if (data.result && data.result.data && data.result.data.length > 0) {
+        console.log('Found student:', data.result.data[0]);
+        return { studentGuid: data.result.data[0].studentGuid, status: 'success' };
+      } else {
+        console.log('No student found for ministry number:', ministryNumber);
+        return { status: 'not_found' };
+      }
     } catch (error) {
       console.error('API Error:', error);
       return { status: 'error' };
@@ -133,6 +142,7 @@ export default function ExcelUploadPage() {
   };
 
   const processStudentData = async (data: ExcelRow[]) => {
+    console.log('Starting to process student data:', data.length, 'rows');
     setIsProcessingAPI(true);
     setApiProgress({ current: 0, total: data.length });
     
@@ -140,6 +150,7 @@ export default function ExcelUploadPage() {
     
     for (let i = 0; i < data.length; i++) {
       const ministryNumber = String(data[i]['Min. No.']).trim();
+      console.log(`Processing row ${i + 1}/${data.length}: Ministry Number ${ministryNumber}`);
       
       // Update progress
       setApiProgress({ current: i + 1, total: data.length });
@@ -150,9 +161,11 @@ export default function ExcelUploadPage() {
       
       // Make API call
       const result = await fetchStudentData(ministryNumber);
+      console.log(`API result for ${ministryNumber}:`, result);
       
       let studentDetails = null;
       if (result.status === 'success' && result.studentGuid) {
+        console.log(`Fetching details for student ${result.studentGuid}`);
         // Fetch detailed student information with payment data from Excel
         studentDetails = await fetchStudentDetails(
           result.studentGuid,
@@ -161,6 +174,7 @@ export default function ExcelUploadPage() {
           Number(data[i]['Balance']) || 0,
           Number(data[i]['Admn No.']) || 0
         );
+        console.log(`Student details for ${result.studentGuid}:`, studentDetails);
       }
       
       // Update the row with result
@@ -178,6 +192,7 @@ export default function ExcelUploadPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
+    console.log('Finished processing student data');
     setIsProcessingAPI(false);
   };
 
@@ -375,12 +390,20 @@ export default function ExcelUploadPage() {
   };
 
   const updateAllStudents = async () => {
+    console.log('Checking students for update. Total excelData:', excelData.length);
+    console.log('Excel data:', excelData);
+    
     const studentsToUpdate = excelData.filter(row => 
       row.APIStatus === 'success' && row.StudentGuid && row.StudentDetails
     );
 
+    console.log('Students available for update:', studentsToUpdate.length);
+    console.log('Students to update:', studentsToUpdate);
+
     if (studentsToUpdate.length === 0) {
-      setError('No students available for update. Please process the Excel file first.');
+      const errorMsg = 'No students available for update. Please process the Excel file first.';
+      console.log('Error:', errorMsg);
+      setError(errorMsg);
       return;
     }
 
